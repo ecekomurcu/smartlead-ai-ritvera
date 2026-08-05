@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ritvera Lead Paneli</title>
+</head>
+<body>
+    <h1>Ritvera Lead Paneli</h1>
+
+    <p id="durum">Kayıtlar yükleniyor...</p>
+
+    <table border="1" cellpadding="8">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>İsim</th>
+                <th>Telefon</th>
+                <th>Mesaj</th>
+                <th>Tarih</th>
+            </tr>
+        </thead>
+
+        <tbody id="leadTablosu"></tbody>
+    </table>
+
+    <script>
+        //  Veritabanındaki lead kayıtlarını backend'den alıp tabloya yaz.
+        async function leadleriYukle() {
+            const durumAlani = document.getElementById("durum");
+            const tabloGovdesi = document.getElementById("leadTablosu");
+
+            try {
+                const response = await fetch("/api/leads");
+                const veri = await response.json();
+
+                if (!response.ok || !veri.basari) {
+                    throw new Error(
+                        veri.hata || "Lead kayıtları alınamadı."
+                    );
+                }
+
+                const kayitlar = veri.kayitlar;
+
+                tabloGovdesi.innerHTML = "";
+
+                //Her lead için tabloda yeni bir satır oluştur.
+                kayitlar.forEach((kayit) => {
+                    const satir = document.createElement("tr");
+
+                    satir.innerHTML = `
+                        <td>${kayit.id}</td>
+                        <td>${kayit.isim}</td>
+                        <td>${kayit.telefon}</td>
+                        <td>${kayit.mesaj || ""}</td>
+                        <td>${kayit.tarih}</td>
+                    `;
+
+                    tabloGovdesi.appendChild(satir);
+                });
+
+                durumAlani.textContent =
+                    kayitlar.length > 0
+                        ? `${kayitlar.length} kayıt bulundu.`
+                        : "Henüz kayıt bulunmuyor.";
+
+            } catch (hata) {
+                durumAlani.textContent = hata.message;
+            }
+        }
+
+        leadleriYukle();
+    </script>
+</body>
+</html>

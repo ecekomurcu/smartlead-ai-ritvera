@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ritvera SmartLead Testi</title>
+</head>
+<body>
+    <h1>Ritvera Yapay Zekâ Asistanı</h1>
+
+    <label for="mesaj">Mesajınız:</label>
+
+    <input
+        type="text"
+        id="mesaj"
+        placeholder="Etkinliğiniz hakkında bir soru sorun"
+    >
+
+    <button id="sorButonu">Sor</button>
+
+    <p id="durum"></p>
+    <div id="cevap"></div>
+
+    <script>
+        //Html elamanlarını Javascript değişkenlerine bağla.
+        const mesajAlani = document.getElementById("mesaj");
+        const sorButonu = document.getElementById("sorButonu");
+        const durumAlani = document.getElementById("durum");
+        const cevapAlani = document.getElementById("cevap");
+
+        // Kullanıcı butona tıkladığında mesajı backend'e gönder.
+        sorButonu.addEventListener("click", async () => {
+            const mesaj = mesajAlani.value.trim();
+
+            if (!mesaj) {
+                durumAlani.textContent = "Lütfen bir mesaj yazın.";
+                return;
+            }
+
+            durumAlani.textContent = "Yanıt bekleniyor...";
+            cevapAlani.textContent = "";
+
+            try {
+                const response = await fetch("/api/sohbet", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        mesaj: mesaj
+                    })
+                });
+
+                const veri = await response.json();
+
+                if (!response.ok || !veri.basari) {
+                    throw new Error(
+                        veri.hata || "Bir hata oluştu."
+                    );
+                }
+
+                //Backendden gelen yapay zeka yanıtını ekrana yaz.
+                cevapAlani.textContent = veri.cevap;
+                durumAlani.textContent = "";
+
+            } catch (hata) {
+                durumAlani.textContent = hata.message;
+            }
+        });
+    </script>
+</body>
+</html>
