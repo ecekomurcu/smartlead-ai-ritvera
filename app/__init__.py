@@ -11,6 +11,9 @@ def create_app():
 
     app.config.from_object(DevelopmentConfig)
 
+    #JSON çıktılarında Türkçe karakterlerin düzgün görünmesi için ensure_ascii kapatılır.
+    app.json.ensure_ascii = False
+
     #Wix gibi farklı bir domainde çalışan arayüzlerin API'ye erişmesine izin ver.
     CORS(
         app,
