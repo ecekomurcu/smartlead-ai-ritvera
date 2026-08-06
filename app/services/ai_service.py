@@ -1,6 +1,9 @@
+import re
+
 import requests
 
 from config import Config
+
 
 
 class AIServiceError(Exception):
@@ -16,6 +19,43 @@ class AIService:
     def _sistem_talimati_getir(self):
         """Yapay zekânın davranış talimatını yapılandırma katmanından getirir."""
         return Config.BUSINESS_CONTEXT
+
+
+    def _fiyat_guvenlik_kontrolu(self, cevap, kullanici_mesaji):
+        """Modelin kullanıcı tarafından verilmemiş fiyatlar üretmesini engeller."""
+        fiyat_deseni = (
+            r"\b\d[\d.,]*\s*(?:bin\s*)?"
+            r"(?:TL|₺|Türk lirası|lira)\b"
+        )
+
+        cevaptaki_fiyatlar = {
+            eslesme.group(0).lower().strip()
+            for eslesme in re.finditer(
+                fiyat_deseni,
+                cevap,
+                flags=re.IGNORECASE
+            )
+        }
+
+        kullanici_fiyatlari = {
+            eslesme.group(0).lower().strip()
+            for eslesme in re.finditer(
+                fiyat_deseni,
+                kullanici_mesaji,
+                flags=re.IGNORECASE
+            )
+        }
+
+        #yapay zeka cevabında kullanıcı tarafından verilmemiş fiyatlar varsa uyarı mesajı döndürür
+        if cevaptaki_fiyatlar - kullanici_fiyatlari:
+            return (
+                "Ritvera için doğrulanmış sabit bir fiyat bilgisi bulunmuyor. "
+                "Fiyatlandırma; etkinlik türü, tarih, kişi sayısı, mekân ve "
+                "beklentiler değerlendirildikten sonra Ritvera ekibi tarafından "
+                "netleştirilir."
+            )
+
+        return cevap
 
     def yanit_uret(self, mesaj, gecmis=None):
         api_key = Config.GROQ_API_KEY
@@ -50,7 +90,9 @@ class AIService:
                 },
                 json={
                     "model": self.model,
-                    "messages": mesajlar
+                    "messages": mesajlar,
+                    "temperature": 0,
+                    "max_tokens": 500
                 },
                 timeout=30
             )
