@@ -6,7 +6,7 @@ from config import Config
 
 
 class AIServiceError(Exception):
-    """Yapay zekâ servisi çağrılarındaki kontrollü hatalar."""
+    """Yapay zeka servisi çağrılarındaki kontrollü hatalar."""
 
 
 class AIService:
