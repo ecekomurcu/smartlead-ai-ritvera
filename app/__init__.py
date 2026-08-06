@@ -1,7 +1,9 @@
+import os
+
 from flask import Flask
 from flask_cors import CORS
 
-from config import DevelopmentConfig
+from config import config_by_name
 from . import database
 from .routes import api_bp, pages_bp
 
@@ -9,9 +11,11 @@ from .routes import api_bp, pages_bp
 def create_app():
     app = Flask(__name__)
 
-    app.config.from_object(DevelopmentConfig)
+    #Yerelde development, Render'da production ayarlarını yükler.
+    config_name = os.environ.get("FLASK_ENV", "development")
+    app.config.from_object(config_by_name[config_name])
 
-    #JSON çıktılarında Türkçe karakterlerin düzgün görünmesi için ensure_ascii kapatılır.
+    #JSON çıktılarında Türkçe karakterlerin düzgün görünmesini sağlar.
     app.json.ensure_ascii = False
 
     #Wix gibi farklı bir domainde çalışan arayüzlerin API'ye erişmesine izin ver.
