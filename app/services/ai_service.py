@@ -96,8 +96,8 @@ class AIService:
                     "messages": mesajlar,
                     #temperature daha tutarlı cevaplar için düşük kullanıyoruz. yüksek temperature modelin yaratıcı ve tahmin edilemez cevaplar üretmesine yol açar.
                     "temperature": 0.1,
-                    #max tokens 1000 seçildi çünkü uzun cevaplar için yeterli, ama aşırı token kullanımını önlüyoruz
-                    "max_tokens": 1000,
+                    #max tokens 600 seçildi çünkü kısa ve uygulanabilir cevaplar üretmek istiyoruz. uzun cevaplar kullanıcı deneyimi olumsuz etkileyebilir.
+                    "max_tokens": 600,
                     #reasoning_effort gereksiz token kullanımını önlemek için low seçildi.
                     "reasoning_effort": "low",
                     #include_reasoning False seçildi çünkü modelin kendi mantığını döndürmesini istemiyoruz.
