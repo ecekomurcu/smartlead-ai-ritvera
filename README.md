@@ -39,11 +39,11 @@ Backend, sorumlulukların ayrılığı (Separation of Concerns) prensibine göre
 
 Wix tarafında frontend kodları doğrudan Flask API ile iletişim kurmak yerine `ritveraApi.web.js` isimli backend web module üzerinden API'ye bağlanır.
 
-Genel Akış:
+## Genel Akış:
 
 Wix Frontend → Wix Backend Web Module → Render / Flask → Groq veya SQLite → Wix Backend → Wix Frontend
 
-### Yapay ZekA Sohbet Akışı
+### Yapay Zeka Sohbet Akışı
 
 1. Kullanıcı Wix üzerinden bir mesaj gönderir.
 2. Mesaj ve konuşma geçmişi `sohbetEt()` fonksiyonuna iletilir.
@@ -103,40 +103,48 @@ Projeyi klonladıktan sonra sanal ortam oluşturun:
 
 ```bash
 python -m venv venv
+```
 
 Sanal ortamı aktif hale getirip bağımlılıkları yükleyin:
 
+```bash
 pip install -r requirements.txt
+```
 
-Proje ana klasöründe ".env" dosyası oluşturularak gerekli environment variable değerleri eklenmelidir.
+Proje ana klasöründe `.env` dosyası oluşturarak gerekli environment variable değerlerini ekleyin:
 
+```env
 GROQ_API_KEY=your_groq_api_key
 SECRET_KEY=your_secret_key
+```
 
-Daha sonra uygulama çalıştırılabilir:
+Daha sonra uygulamayı çalıştırın:
 
+```bash
 python run.py
+```
 
-Backend varsayılan olarak Flask sunucsunda çalışacaktır.
+Backend varsayılan olarak yerel Flask sunucusunda çalışacaktır.
 
-Canlı Proje
+## Canlı Proje
 
-Wix B2C Arayüzü
-https://ecekomurcu02.wixstudio.com/ritvera
+### Wix B2C Arayüzü
 
-Wix Yönetim Paneli
-https://ecekomurcu02.wixstudio.com/ritvera/blank
+[Ritvera Wix Sitesi](https://ecekomurcu02.wixstudio.com/ritvera)
 
-Render Backend
-https://smartlead-ai-ritvera.onrender.com
+### Wix Yönetim Paneli
 
-Health Kontrolü
-Render Backend
+[Ritvera Yönetim Paneli](https://ecekomurcu02.wixstudio.com/ritvera/blank)
 
-https://smartlead-ai-ritvera.onrender.com/health
+### Render Backend
 
+[Render Backend](https://smartlead-ai-ritvera.onrender.com)
 
-Proje Notu
+### Health Kontrolü
+
+[Backend Health Check](https://smartlead-ai-ritvera.onrender.com/health)
+
+## Proje Notu
 
 Bu proje Smartlead AI mimarisinin Ritvera EventTech fikrine uyarlanmış bir MVP sürümüdür.
 Temel backend katmanları konuya özel koddan ayrılmıştır. Ritvera'ya ait yapay zeka davranışları
