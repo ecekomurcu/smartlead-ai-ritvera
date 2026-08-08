@@ -72,7 +72,7 @@ Backend servisinin aktif olup olmadığını kontrol eder.
 
 ### POST `/api/sohbet`
 
-Kullanıcı mesajını ve isteğe bağlı konuşma geçmişini yapay zekA servisine gönderir.
+Kullanıcı mesajını ve isteğe bağlı konuşma geçmişini yapay zeka servisine gönderir.
 
 ### POST `/api/leads`
 
