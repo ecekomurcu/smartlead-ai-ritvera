@@ -35,16 +35,16 @@ def create_app():
     with app.app_context():
         database.init_db()
 
-    # API ve sayfa rotalarını uygulamaya kaydederiz.
+    # API rotalarını uygulamaya kaydederiz.
     app.register_blueprint(api_bp)
     app.register_blueprint(pages_bp)
 
     @app.route("/health")
     def health():
         return {
+            "basari": True,
             "status": "aktif",
-            "message": "SmartLead backend çalışıyor.",
-            "ai_provider": app.config["AI_PROVIDER"],
+            "message": "Ritvera backend çalışıyor."
         }
 
     return app

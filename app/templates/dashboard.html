@@ -4,25 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ritvera Lead Paneli</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #1f2937;
+            font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .sayfa {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0;
+        }
+
+        .ust-alan {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #111827;
+        }
+
+        .ana-sayfa-linki {
+            padding: 10px 16px;
+            border-radius: 8px;
+            color: #ffffff;
+            text-decoration: none;
+            background-color: #6d4de3;
+        }
+
+        .panel {
+            padding: 24px;
+            border-radius: 12px;
+            background-color: #ffffff;
+            box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+        }
+
+        #durum {
+            margin-top: 0;
+            color: #4b5563;
+        }
+
+        .tablo-alani {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: #374151;
+            background-color: #f9fafb;
+        }
+
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .hata {
+            color: #b91c1c !important;
+        }
+
+        @media (max-width: 600px) {
+            .ust-alan {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .panel {
+                padding: 16px;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Ritvera Lead Paneli</h1>
+    <main class="sayfa">
+        <div class="ust-alan">
+            <h1>Ritvera Lead Paneli</h1>
 
-    <p id="durum">Kayıtlar yükleniyor...</p>
+            <a class="ana-sayfa-linki" href="/">
+                Ana Sayfaya Dön
+            </a>
+        </div>
 
-    <table border="1" cellpadding="8">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>İsim</th>
-                <th>Telefon</th>
-                <th>Mesaj</th>
-                <th>Tarih</th>
-            </tr>
-        </thead>
+        <section class="panel">
+            <p id="durum" role="status">
+                Kayıtlar yükleniyor...
+            </p>
 
-        <tbody id="leadTablosu"></tbody>
-    </table>
+            <div class="tablo-alani">
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">İsim</th>
+                            <th scope="col">Telefon</th>
+                            <th scope="col">Mesaj</th>
+                            <th scope="col">Tarih</th>
+                            <th scope="col">ID</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="leadTablosu"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
     <script>
         //  Veritabanındaki lead kayıtlarını backend'den alıp tabloya yaz.
@@ -40,21 +150,33 @@
                     );
                 }
 
+                if (!Array.isArray(veri.kayitlar)) {
+                    throw new Error(
+                        "Lead kayıtları beklenen biçimde alınamadı."
+                    );
+                }
+
                 const kayitlar = veri.kayitlar;
 
-                tabloGovdesi.innerHTML = "";
+                tabloGovdesi.textContent = "";
 
                 //Her lead için tabloda yeni bir satır oluştur.
                 kayitlar.forEach((kayit) => {
                     const satir = document.createElement("tr");
 
-                    satir.innerHTML = `
-                        <td>${kayit.id}</td>
-                        <td>${kayit.isim}</td>
-                        <td>${kayit.telefon}</td>
-                        <td>${kayit.mesaj || ""}</td>
-                        <td>${kayit.tarih}</td>
-                    `;
+                    const degerler = [
+                        kayit.isim || "",
+                        kayit.telefon || "",
+                        kayit.mesaj || "",
+                        kayit.tarih || "",
+                        kayit.id || ""
+                    ];
+
+                    degerler.forEach((deger) => {
+                        const hucre = document.createElement("td");
+                        hucre.textContent = deger;
+                        satir.appendChild(hucre);
+                    });
 
                     tabloGovdesi.appendChild(satir);
                 });
@@ -64,8 +186,13 @@
                         ? `${kayitlar.length} kayıt bulundu.`
                         : "Henüz kayıt bulunmuyor.";
 
+                durumAlani.classList.remove("hata");
+
             } catch (hata) {
-                durumAlani.textContent = hata.message;
+                durumAlani.textContent =
+                    hata.message || "Kayıtlar yüklenemedi.";
+
+                durumAlani.classList.add("hata");
             }
         }
 

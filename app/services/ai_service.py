@@ -1,5 +1,3 @@
-import re
-
 import requests
 
 from config import Config
@@ -15,58 +13,18 @@ class AIService:
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = "openai/gpt-oss-20b"
 
-    def _sistem_talimati_getir(self):
-        """Yapay zekanın davranış talimatını yapılandırma katmanından getirir."""
-        return Config.BUSINESS_CONTEXT
-
-    #Yapay zeka modelinin fiyat üretmesinin önüne geçmek için kontrol sağlayıcı bir yöntem ekledik.
-    #kullanıcının mesajında fiyat bilgisi yoksa modelin cevaplarında fiyat üretmesini engeller.
-
-    def _fiyat_guvenlik_kontrolu(self, cevap, kullanici_mesaji):
-        """Modelin kullanıcı tarafından verilmemiş fiyatlar üretmesini engeller."""
-        fiyat_deseni = (
-            r"\b\d[\d.,]*\s*(?:bin\s*)?"
-            r"(?:TL|₺|Türk lirası|lira)\b"
-        )
-
-        cevaptaki_fiyatlar = {
-            eslesme.group(0).lower().strip()
-            for eslesme in re.finditer(
-                fiyat_deseni,
-                cevap,
-                flags=re.IGNORECASE
-            )
-        }
-
-        kullanici_fiyatlari = {
-            eslesme.group(0).lower().strip()
-            for eslesme in re.finditer(
-                fiyat_deseni,
-                kullanici_mesaji,
-                flags=re.IGNORECASE
-            )
-        }
-
-        #Kullanıcının vermediği bir fiyat üretilirse güvenli cevap döndür.
-        if cevaptaki_fiyatlar - kullanici_fiyatlari:
-            return (
-                "Ritvera için doğrulanmış sabit bir fiyat bilgisi bulunmuyor. "
-                "Fiyatlandırma; etkinlik türü, tarih, kişi sayısı, mekân ve "
-                "beklentiler değerlendirildikten sonra Ritvera ekibi tarafından "
-                "netleştirilir."
-            )
-
-        return cevap
-
     def yanit_uret(self, mesaj, gecmis=None):
         api_key = Config.GROQ_API_KEY
-        business_context = self._sistem_talimati_getir()
+        business_context = Config.BUSINESS_CONTEXT
 
-        #API anahtarı yoksa uygulama çökmeden demo cevabı döndür.
+        #API anahtarı yoksa gerçek yapay zeka isteği göndermek yerine demo mesajı döndürürüz.
         if not api_key:
-            return "Demo modu aktif. Groq API anahtarı henüz eklenmedi."
+            return (
+                "Ritvera yapay zeka asistanı şu anda demo modunda çalışıyor. "
+                "Etkinlik planlama desteği için lütfen daha sonra tekrar deneyin."
+            )
 
-        #sistem talimatı, geçmiş konuşmalar ve son kullanıcı mesajı.
+        #Sistem talimatı, geçmiş konuşmalar ve son kullanıcı mesajı.
         mesajlar = [
             {
                 "role": "system",
@@ -74,8 +32,24 @@ class AIService:
             }
         ]
 
-        if gecmis:
-            mesajlar.extend(gecmis)
+        #Geçmişte yalnızca kullanıcı ve yapay zeka mesajlarına izin veririz.
+        for kayit in gecmis or []:
+            if not isinstance(kayit, dict):
+                continue
+
+            rol = kayit.get("role")
+            icerik = kayit.get("content")
+
+            if rol not in ["user", "assistant"]:
+                continue
+
+            if not isinstance(icerik, str) or not icerik.strip():
+                continue
+
+            mesajlar.append({
+                "role": rol,
+                "content": icerik.strip()
+            })
 
         mesajlar.append({
             "role": "user",
@@ -89,52 +63,42 @@ class AIService:
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json"
                 },
-
-                #aşağıdaki değerler modelin daha tutarlı ve güvenli cevaplar üretmesini sağlamak için ayarlandı.
                 json={
                     "model": self.model,
                     "messages": mesajlar,
-                    #temperature daha tutarlı cevaplar için düşük kullanıyoruz. yüksek temperature modelin yaratıcı ve tahmin edilemez cevaplar üretmesine yol açar.
+                    #Temperature düşük tutularak daha tutarlı cevaplar üretmesini sağlarız.
                     "temperature": 0.1,
-                    #max tokens 600 seçildi çünkü kısa ve uygulanabilir cevaplar üretmek istiyoruz. uzun cevaplar kullanıcı deneyimi olumsuz etkileyebilir.
-                    "max_tokens": 600,
-                    #reasoning_effort gereksiz token kullanımını önlemek için low seçildi.
-                    "reasoning_effort": "low",
-                    #include_reasoning False seçildi çünkü modelin kendi mantığını döndürmesini istemiyoruz.
-                    "include_reasoning": False
+                    #Yanıtların gereksiz şekilde uzamasını önlemek için token sınırı koyarız.
+                    "max_completion_tokens": 600
                 },
                 timeout=30
             )
 
-            #Groq, başarısız isteklerde HTTP 4xx veya 5xx döndürür.
+            #Groq başarısız isteklerde HTTP 4xx veya 5xx döndürür.
             response.raise_for_status()
 
             veri = response.json()
 
-            #Groq cevabındaki asıl yapay zeka metnini çıkar.
+            #Groq cevabındaki asıl yapay zeka metnini çıkarırız.
             cevap = veri["choices"][0]["message"]["content"].strip()
 
-            #istek başarılı ama model boş bir yanıt döndürdüyse güvenli cevap döndürür.
+            #İstek başarılı olsa bile model boş bir yanıt döndürürse kontrollü hata oluştururuz.
             if not cevap:
                 raise AIServiceError(
-                    "Yapay zekâ servisi boş bir yanıt döndürdü."
+                    "Yapay zeka servisi boş bir yanıt döndürdü."
                 )
 
-            #kullanıcıya cevabı göndermeden önce fiyat güvenlik kontrolünden geçiririz.
-            return self._fiyat_guvenlik_kontrolu(
-                cevap=cevap,
-                kullanici_mesaji=mesaj
-            )
+            return cevap
 
         except requests.RequestException as hata:
             raise AIServiceError(
-                "Yapay zekâ servisine ulaşılamadı."
+                "Yapay zeka servisine ulaşılamadı."
             ) from hata
 
         except (KeyError, IndexError, TypeError, ValueError) as hata:
-            #olası bir beklenmeyen hatada kullancıya güvenli bir mesaj döndürür ve hata detaylarını loglar.
+            #Beklenmeyen cevap yapısında kullanıcıya teknik detay göstermeden kontrollü hata oluştururuz.
             raise AIServiceError(
-                "Yapay zekâ servisinden geçerli bir yanıt alınamadı."
+                "Yapay zeka servisinden geçerli bir yanıt alınamadı."
             ) from hata
 
 

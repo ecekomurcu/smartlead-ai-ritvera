@@ -1,6 +1,6 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 
-from .database import lead_ekle, tum_leadler
+from .database import DatabaseError, lead_ekle, tum_leadler
 from .services.ai_service import AIServiceError, ai_service
 
 
@@ -33,62 +33,113 @@ def dashboard_sayfasi():
 @api_bp.post("/leads")
 def lead_kaydet():
     #İsteklerdeki JSON verisini Python dictionary'si olarak al.
-    veri = request.get_json(silent=True) or {}
+    veri = request.get_json(silent=True)
 
-    isim = (veri.get("isim") or "").strip()
-    telefon = (veri.get("telefon") or "").strip()
-    mesaj = (veri.get("mesaj") or "").strip() or None
+    if not isinstance(veri, dict):
+        return jsonify({
+            "basari": False,
+            "hata": "Geçerli bir JSON nesnesi gönderilmelidir."
+        }), 400
+
+    isim = veri.get("isim")
+    telefon = veri.get("telefon")
+    mesaj = veri.get("mesaj")
 
     #Zorunlu alanlar eksikse veritabanı kaydı yapmadan önce hatayı bildir.
-    if not isim or not telefon:
+    if (
+        not isinstance(isim, str)
+        or not isinstance(telefon, str)
+        or not isim.strip()
+        or not telefon.strip()
+    ):
         return jsonify({
             "basari": False,
             "hata": "İsim ve telefon alanları zorunludur."
         }), 400
 
-    yeni_id = lead_ekle(
-        isim,
-        telefon,
-        mesaj
-    )
+    if mesaj is not None and not isinstance(mesaj, str):
+        return jsonify({
+            "basari": False,
+            "hata": "Mesaj alanı metin biçiminde olmalıdır."
+        }), 400
 
-    return jsonify({
-        "basari": True,
-        "mesaj": "Lead başarıyla kaydedildi.",
-        "id": yeni_id
-    }), 201
+    isim = isim.strip()
+    telefon = telefon.strip()
+    mesaj = mesaj.strip() if mesaj and mesaj.strip() else None
+
+    try:
+        yeni_id = lead_ekle(
+            isim,
+            telefon,
+            mesaj
+        )
+
+        return jsonify({
+            "basari": True,
+            "mesaj": "Lead başarıyla kaydedildi.",
+            "id": yeni_id
+        }), 201
+
+    except DatabaseError:
+        current_app.logger.exception(
+            "Lead kaydedilirken veritabani hatasi olustu."
+        )
+
+        return jsonify({
+            "basari": False,
+            "hata": "Lead kaydedilirken bir sorun oluştu."
+        }), 500
 
 
 @api_bp.get("/leads")
 def leadleri_listele():
-    kayitlar = tum_leadler()
+    try:
+        kayitlar = tum_leadler()
 
-    #SQLite'den dönen kayıtları JSON uyumlu bir listeye çeviririz.
-    sonuc = [
-        dict(kayit)
-        for kayit in kayitlar
-    ]
+        #SQLite'den dönen kayıtları JSON uyumlu bir listeye çeviririz.
+        sonuc = [
+            dict(kayit)
+            for kayit in kayitlar
+        ]
 
-    return jsonify({
-        "basari": True,
-        "kayitlar": sonuc
-    }), 200
+        return jsonify({
+            "basari": True,
+            "kayitlar": sonuc
+        }), 200
+
+    except DatabaseError:
+        current_app.logger.exception(
+            "Lead kayitlari getirilirken veritabani hatasi olustu."
+        )
+
+        return jsonify({
+            "basari": False,
+            "hata": "Lead kayıtları getirilemedi."
+        }), 500
 
 
 @api_bp.post("/sohbet")
 def sohbet():
     #Kullanıcıdan gelen JSON verisini alırız. "mesaj" ve "gecmis" alanlarını bekleriz.
-    veri = request.get_json(silent=True) or {}
+    veri = request.get_json(silent=True)
 
-    mesaj = (veri.get("mesaj") or "").strip()
+    if not isinstance(veri, dict):
+        return jsonify({
+            "basari": False,
+            "hata": "Geçerli bir JSON nesnesi gönderilmelidir."
+        }), 400
+
+    mesaj = veri.get("mesaj")
     gecmis = veri.get("gecmis") or []
 
     #Boş mesajın yapay zekaya erişmesini engellemek için hatayı bildiririz.
-    if not mesaj:
+    if not isinstance(mesaj, str) or not mesaj.strip():
         return jsonify({
             "basari": False,
             "hata": "Mesaj alanı zorunludur."
         }), 400
+
+    mesaj = mesaj.strip()
 
     #konuşma geçmişi liste biçiminde değilse hatayı bildiririz.
     if not isinstance(gecmis, list):
@@ -110,6 +161,11 @@ def sohbet():
 
     except AIServiceError as hata:
         #Yapay zeka'ya ulaşılamazsa 503 Service Unavailable hatası döndürürüz.
+        current_app.logger.warning(
+            "Yapay zeka servisi hatasi: %s",
+            hata
+        )
+
         return jsonify({
             "basari": False,
             "hata": str(hata)
